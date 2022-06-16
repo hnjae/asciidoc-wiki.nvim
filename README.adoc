@@ -1,5 +1,4 @@
-= `asciidoc-wiki.nvim`
-:toc:
+= asciidoc-wiki.nvim
 
 [WIP] This project is in the alpha state. Plugin behavior can be changed at any time.
 
@@ -19,7 +18,7 @@ This project aims to provide a subset of features provided by Vimwiki in AsciiDo
 *** [ ] Handle `pass:` syntax
 ** [ ] Handle `include:` syntax.
 ** [ ] Handle `link:` syntax.
-** [ ] Handle `<<filename.adoc,link text>>` syntax.
+** [ ] Handle `\<<filename.adoc,link text>>` syntax.
 *** [ ] Read following attribute: `:relfileprefix:`, `:relfilesuffix:`.
 *** [ ] Support anchor: jump to anchor location.
 ** [ ] Handle link:https://docs.asciidoctor.org/asciidoc/latest/macros/autolinks/[Autolinks]
