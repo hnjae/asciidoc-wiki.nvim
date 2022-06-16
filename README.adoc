@@ -10,22 +10,24 @@ This project aims to provide a subset of features provided by Vimwiki in AsciiDo
 *** [ ] Visual mode support.
 *** [ ] Change the link name if it doesn't follow the filesystem's filename limitation.
 ** [x] Go backlink functin.
-** [ ] Open external file on link.
+** [x] Open external file on link.
 *** [ ] Support anchor.
 ** [ ] Allow user to open cross-reference link in vsplit/split.
 ** [ ] Handle space in link.
-*** [ ] Handle `%20` and `\&#32;`
+*** [ ] Handle reserved character such as `%20` or `\&#32;`, `%5F`.
 *** [ ] Handle `pass:` syntax
 ** [ ] Handle `include:` syntax.
-** [ ] Handle `link:` syntax.
+** [x] Handle `link:` syntax.
 ** [ ] Handle `\<<filename.adoc,link text>>` syntax.
 *** [ ] Read following attribute: `:relfileprefix:`, `:relfilesuffix:`.
 *** [ ] Support anchor: jump to anchor location.
-** [ ] Handle link:https://docs.asciidoctor.org/asciidoc/latest/macros/autolinks/[Autolinks]
+** [x] Handle link:https://docs.asciidoctor.org/asciidoc/latest/macros/autolinks/[Autolinks]
 ** [ ] Handle link:https://docs.asciidoctor.org/asciidoc/latest/macros/link-macro-attribute-parsing/[Link Macro Attribute Parsing]
 ** [ ] Handle link:https://docs.asciidoctor.org/asciidoc/latest/macros/complex-urls[Troubleshooting Complex URLs]
 ** [ ] Add an option to conceal the link.
+*** [ ] Handle Attribute in link.
 ** [ ] Add an option to jump to next/previous link.
+** [ ] Handle `video::`, `audio::`, `image::`
 * [ ] Allow user to config options.
 * [ ] Create a function that opens index file.
 * [ ] Create a function that updates filename in the wiki.
@@ -59,3 +61,6 @@ If you want to map the above functions to the key sequence, adjust following cod
 vim.api.nvim_buf_set_keymap( 0, "n", "<CR>", "<cmd>lua require('asciidoc_wiki.link_handler').follow_link()<CR>", {silent = true, noremap = false} )
 vim.api.nvim_buf_set_keymap( 0, "n", "<Backspace>", "<cmd>lua require('asciidoc_wiki.link_handler').go_backlink()<CR>", {silent = true, noremap = false} )
 ----
+
+== Changelog
+* 2022-06-16: It can now open URLs and the external file (only in Linux).

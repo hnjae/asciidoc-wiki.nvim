@@ -37,7 +37,7 @@ local function_to_lua_string = {
 }
 
 local buf_set_keymap = function(keymap, map_mode)
-  if false and status_wk then
+  if status_wk then
     wk.register(
       keymap, {mode = map_mode, silent = true, noremap = false, buffer = 0 }
     )

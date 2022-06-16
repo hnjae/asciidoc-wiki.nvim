@@ -25,8 +25,10 @@ local default_config = {
   -- conceal_links = true,
   -- hide_ext = false,
   key_mappings = {
-    all_map = false,
-  }
+    global = false,
+    buffer = false,
+  },
+  key_mapping_suffix = "<Leader>w"
 }
 local config = {}
 
