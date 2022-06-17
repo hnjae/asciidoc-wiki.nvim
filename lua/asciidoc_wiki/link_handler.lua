@@ -78,12 +78,13 @@ local parse_link = function(link_type, link_raw)
 
     pstart, pend = vim.regex("\\[\\zs.*\\ze\\]$"):match_str(link_raw)
     l_string = string.sub(link_raw, pstart+1, pend)
+    -- l_ref_raw: blabla.adoc#optional
     local l_ref_raw = string.sub(link_raw, 6, pstart-1)
     anchor = vim.fn.matchstr(l_ref_raw, "\\#\\zs[^#]*\\ze")
     if string.len(anchor) == 0 then
       l_ref = l_ref_raw
     else
-      l_ref = string.sub(l_ref_raw, 1, string.len(l_ref_raw) - string.len(anchor))
+      l_ref = string.sub(l_ref_raw, 1, string.len(l_ref_raw) - string.len(anchor) - 1)
     end
 
     if string.find(l_ref, ".adoc") then
