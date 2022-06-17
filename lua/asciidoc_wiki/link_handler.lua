@@ -4,43 +4,32 @@ local regex_pattern = {
   -- patten match per line
   -- this var should be list not dict.
 
-  {"fail_xref1", "xref:pass:[^ \n\t]*"},
+  {"fail_xref_pattern", "xref:pattern:[^ \n\t]*"},
   -- asciidoctor does not parse xref starts with +, -, !, ※, as link
-  {"fail_xref2", "xref:+[^ \n\t]*"},
 
   -- type = "magic" Regex Pattern
   -- NOTE: Asciidoctor does not consider url starts with _ + * as a link. (2022-06-16)
-  {"angled_link", "<\\zs[a-z]\\{3,}://[^ \n\t\\[\\]]\\+\\ze>"},
-  {"autolink_w_text", "\\([\\_+*]\\)\\@<!\\<[a-z]\\{3,}://[^ \n\t\\[\\]]\\+\\[.\\{-}\\]"},
-  {"autolink",  "\\([\\_+*]\\)\\@<!\\<[a-z]\\{3,}://[^ \n\t\\[\\]]\\+"},
+  {"angled_link", "\\zs<[a-z]\\+://[^ \n\t\\[\\]]\\+>\\ze"},
+  {"autolink_w_text", "\\([\\_+*]\\)\\@<!\\<[a-z]\\+://[^ \n\t\\[\\]]\\+\\[.\\{-}\\]"},
+  {"autolink",  "\\([\\_+*]\\)\\@<!\\<[a-z]\\+://[^ \n\t\\[\\]]\\+"},
 
-  -- TODO: Is xref with no *.adoc extension an anchor? <2022-06-16, Hyunjae Kim>
-  -- xref = "xref:[^ \n\t]\\+\\[.\\{-}\\]",
-  {"xref", "xref:[^ \n\t]\\+\\[.\\{-}\\]"},
+  -- NOTE: xref with no *.adoc extension converts to an anchor. (2022-06-18)
+  {"xref", "xref:[^`~![\\]@$%^&*()-=+}\\|;',?※][^ \n\t]\\+\\[.\\{-}\\]"},
 
   -- NOTE: Even Asciidoctor does handle well when ] or [ is included in the link_pass syntax. (2022-06-16)
   {"link_pass", "link:pass:\\[.\\{-}\\]\\[.\\{-}\\]"},
   {"link_pp", "link:++.\\+++\\[.\\{-}\\]"},
-  -- link_pp = "link:++",
   {"link", "link:[^ \n\t\\[\\]]\\+\\[.\\{-}\\]"},
 
+  {"mailto", "mailto:[^`~![\\]@$%^&*()-=+}\\|;',?※][^ \n\t]*\\[.*\\]"},
   {"email", "[^ \n\t@|/]\\+@[^ \\.\n\t@|+!~=/]\\+\\.[^ \\.\n\t@|+!~=/]\\+"},
 
   {"fail_link",  "link:[^ \n\t]*"},
   {"fail_xref",  "xref:[^ \n\t]*"},
   {"fail_autolink",  "[^ \n\t]*://[^ \n\t]*"},
+  {"fail_mailto",  "mailto:[^ \n\t]*"},
   {"fail_email",  "[^ \n\t]\\+@[^ \n\t]\\+"},
 }
--- local asciidoctor_allowed_autolink_url_schemes = {
---   -- https://docs.asciidoctor.org/asciidoc/latest/macros/autolinks/
---   "http",
---   "https",
---   "ftp",
---   "irc",
---   "mailto",
---   "file",
---   -- Although not described in documents. it is interpreted as a url.
--- }
 
 
 -- TODO: clear history_stack if window closes <2022-06-15, Hyunjae Kim>
@@ -76,47 +65,107 @@ local parse_link = function(link_type, link_raw)
   if link_type == "xref" then
     -- xref:blabla.adoc#optional[blabla]
 
-    pstart, pend = vim.regex("\\[\\zs.*\\ze\\]$"):match_str(link_raw)
-    l_string = string.sub(link_raw, pstart+1, pend)
+    pstart, pend = vim.regex("\\[\\zs.\\{-}\\ze\\]$"):match_str(link_raw)
+    l_string = link_raw:sub(pstart+1, pend)
+
     -- l_ref_raw: blabla.adoc#optional
-    local l_ref_raw = string.sub(link_raw, 6, pstart-1)
-    anchor = vim.fn.matchstr(l_ref_raw, "\\#\\zs[^#]*\\ze")
-    if string.len(anchor) == 0 then
-      l_ref = l_ref_raw
-    else
-      l_ref = string.sub(l_ref_raw, 1, string.len(l_ref_raw) - string.len(anchor) - 1)
+    local l_ref_raw = link_raw:sub(6, pstart-1)
+
+    if l_ref_raw:find("^#") then
+      -- xref:#anchor[string] is same as xref:anchor[string]
+      anchor = l_ref_raw:sub(2, l_ref_raw:len())
+      -- TODO: this is an anchor, implement it <2022-06-17, Hyunjae Kim>
+      print("Not supported yet: Anchor : " .. anchor)
+      return nil, anchor, l_string
     end
 
-    if string.find(l_ref, ".adoc") then
+    anchor = vim.fn.matchstr(l_ref_raw, "\\#\\zs[^#]*\\ze$")
+    if anchor:len() == 0 then
+      l_ref = l_ref_raw
+
+      if not l_ref:find("%.adoc$") then
+        anchor = l_ref
+        -- TODO: this is an anchor, implement it <2022-06-17, Hyunjae Kim>
+        print("Not supported yet: Anchor : " .. anchor)
+        return nil, anchor, l_string
+      end
+
       -- local anchor = vim.fn.matchstr(link_raw, "\\#\\zs.*\\ze\\[")
       -- NOTE: `:help non-greedy` \\{-}
       return l_ref, anchor, l_string
-    else
-      -- if no extension, l_ref will be an anchor
-      anchor = l_ref
-      -- TODO: this is an anchor, implement it <2022-06-17, Hyunjae Kim>
-      print("Not implemented yet: Anchor toward " .. anchor)
-      return nil, anchor, l_string
     end
-  end
 
-  if link_type == "link" then
-    l_string = vim.fn.matchstr(link_raw, "\\[\\zs.*\\ze\\]$")
-    anchor = vim.fn.matchstr(link_raw, "\\#\\zs.*\\ze\\[")
-    -- NOTE: `:help non-greedy` \\{-}
-    l_ref = vim.fn.matchstr(link_raw, link_type .. ":\\zs.\\{-}[\\#\\[]\\@=")
+    -- xref:babla#blabla then
+    l_ref = l_ref_raw:sub(1, -anchor:len() -2)
+    if not l_ref:find("%.adoc$") then
+      -- NOTE: xref:aaa#bbb[ccc] is translated as <a href="aaa.html#bbb">ccc</a> (2022-06-18 confirmed)
+      return l_ref .. ".html", anchor, l_string
+    end
+
     return l_ref, anchor, l_string
   end
 
-  if link_type == "angled_link" or link_type == "autolink" then
-    return link_raw, nil, link_raw
+  if link_type == "link" then
+
+    pstart, pend = vim.regex("\\[\\zs.\\{-}\\ze\\]$"):match_str(link_raw)
+    l_string = link_raw:sub(pstart+1, pend)
+    local l_ref_raw = string.sub(link_raw, 6, pstart-1)
+
+    anchor = vim.fn.matchstr(l_ref_raw, "\\#\\zs[^#]*\\ze$")
+    if anchor:len() == 0 then
+      l_ref = l_ref_raw
+      return l_ref, anchor, l_string
+    end
+
+    l_ref = string.sub(l_ref_raw, 1, string.len(l_ref_raw) - string.len(anchor) - 1)
+
+    -- TODO: correspond to following circumstance <2022-06-18, Hyunjae Kim>
+    -- if l_ref:len() == 0 then
+    -- l_ref:len() == 0 but anchor exists
+    -- link:#aaa[bbb] -- this work as in-file anchor
+
+    return l_ref, anchor, l_string
   end
 
-  if link_type == "autolink_w_text" then
-    l_string = vim.fn.matchstr(link_raw, "\\[\\zs.*\\ze\\]$")
-    l_ref = vim.fn.matchstr(link_raw, ".*\\ze\\[")
+  if link_type == "angled_link" or link_type == "autolink" or link_type == "autolink_w_text" then
+    if link_type == "autolink_w_text" then
+      l_string = vim.fn.matchstr(link_raw, "\\[\\zs.\\{-}\\ze\\]$")
+      -- l_ref = vim.fn.matchstr(link_raw, ".*\\ze\\[")
+      l_ref = link_raw:sub(1, - l_string:len() - 3)
+    elseif link_type == "angled_link" then
+        -- remove angle brackets
+        l_ref = link_raw:sub(2, -2)
+        l_string = l_ref
+    else
+      -- link_type == autolink
+      l_ref = link_raw
+      l_string = l_ref
+    end
+
+
+    local asciidoctor_allowed_autolink_url_schemes = {
+      -- https://docs.asciidoctor.org/asciidoc/latest/macros/autolinks/
+      "https", "http", "ftp", "irc",
+      -- Although "file" is not listed in documents. it is interpreted as well. (2022-06-17)
+      "file",
+    }
+
+    local is_matched = false
+    for _, url_type in ipairs(asciidoctor_allowed_autolink_url_schemes) do
+      if l_ref:match("^" .. url_type .. "://") then
+        is_matched = true
+        break
+      end
+    end
+
+    if not is_matched then
+      print("Following URL scheme is not supported: " .. l_ref)
+      return
+    end
+
     return l_ref, nil, l_string
   end
+
 
   -- TODO: implement link_pass <2022-06-16, Hyunjae Kim>
   -- TODO: implement link_pp <2022-06-16, Hyunjae Kim>
@@ -125,7 +174,6 @@ local parse_link = function(link_type, link_raw)
   print("Syntax error: " .. link_raw .. " " .. link_type )
   -- print("Syntax error: " .. link_raw .. " " .. link_type )
   return nil, nil, nil
-
 end
 
 local get_link_from_cursor = function()
@@ -170,16 +218,27 @@ local create_link = function()
   vim.fn.execute("normal! ciW" .. link_str)
 end
 
+-- local goto_anchor = function(anchor)
+--   print("Goto Anchor it not supported yet: " .. anchor)
+-- end
 
-local open_target = function(arg, link_type)
-  local open_external = function(arg)
-    local output = vim.fn.system("xdg-open -- " .. vim.fn.shellescape(arg) .. " &")
+local open_target = function(arg, anchor, link_type)
+  local open_external = function(target)
+    if not target then
+      return
+    end
+
+    -- print("Opening :" .. target)
+
+    local output = vim.fn.system("xdg-open -- " .. vim.fn.shellescape(target) .. " &")
   end
 
-  if link_type ~= "xref" then
+  -- if link_type ~= "xref" then
+  if not (link_type == "xref" and arg:match("%.adoc$")) then
     open_external(arg)
     return
   end
+
 
   -- TODO: Consider using full path <2022-06-15, Hyunjae Kim>
   local history = {
@@ -202,6 +261,10 @@ local open_target = function(arg, link_type)
 
   local old_buf = vim.fn.bufnr("%")
   -- TODO: can not handle character # in new_file <2022-06-17, Hyunjae Kim>
+  -- TODO: escape string for use as a vim command arguments <2022-06-18, Hyunjae Kim>
+  -- if new_file:find("#") then
+  --   print("")
+  -- end
   vim.fn.execute("edit " .. new_file)
 
   -- If no windows contain old_buf than close it.
@@ -248,8 +311,8 @@ M.follow_link = function()
     return
   end
   local link_target, anchor, link_str = parse_link(link_type, link_raw)
-  if link_target then
-    open_target(link_target, link_type)
+  if link_target or anchor then
+    open_target(link_target, anchor, link_type)
   end
 end
 
