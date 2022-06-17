@@ -12,7 +12,7 @@ local regex_pattern = {
   autolink =  "\\([_+\\*]\\)\\@<!\\<[a-z]\\{3,}://[^ \n\\[\\]]\\+",
 
   -- TODO: Is xref with no *.adoc extension an anchor? <2022-06-16, Hyunjae Kim>
-  xref = "xref:[^ \n\\[\\]]\\+\\[.\\{-}\\]",
+  xref = "xref:[^ \n]\\+\\[.\\{-}\\]",
 
   -- NOTE: Even Asciidoctor does handle well when ] or [ is included in the link_pass syntax. (2022-06-16)
   link_pass = "link:pass:\\[.\\{-}\\]\\[.\\{-}\\]",
@@ -100,7 +100,7 @@ local parse_link = function(link_type, link_raw)
   -- TODO: implement link_pp <2022-06-16, Hyunjae Kim>
   -- TODO: implement email <2022-06-16, Hyunjae Kim>
 
-  print("ERROR Opening: " .. link_raw )
+  print("Syntax error in: " .. link_raw )
   return nil, nil, nil
 
 end
