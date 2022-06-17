@@ -72,11 +72,10 @@ local parse_link = function(link_type, link_raw)
 
   local pstart, pend = nil, nil
   local l_ref, anchor, l_string = nil, nil, nil
+
   if link_type == "xref" then
     -- xref:blabla.adoc#optional[blabla]
 
-    -- local l_string = vim.fn.matchstr(link_raw, "\\[\\zs.*\\ze\\]$")
-    -- local l_ref = vim.fn.matchstr(link_raw, link_type .. ":\\zs.\\{-}[\\#\\[]\\@=")
     pstart, pend = vim.regex("\\[\\zs.*\\ze\\]$"):match_str(link_raw)
     l_string = string.sub(link_raw, pstart+1, pend)
     local l_ref_raw = string.sub(link_raw, 6, pstart-1)
@@ -84,13 +83,8 @@ local parse_link = function(link_type, link_raw)
     if string.len(anchor) == 0 then
       l_ref = l_ref_raw
     else
-      l_ref = string.sub(l_ref_raw, 1, string.len(l_ref_raw) - string.len("anchor"))
-    -- local l_ref = vim.fn.matchstr(l_ref_raw, "[\\#]\\@=")
+      l_ref = string.sub(l_ref_raw, 1, string.len(l_ref_raw) - string.len(anchor))
     end
-    -- print(l_ref,string.len(l_ref))
-    -- print(anchor,string.len(anchor))
-    -- print(l_string,string.len(l_string))
-
 
     if string.find(l_ref, ".adoc") then
       -- local anchor = vim.fn.matchstr(link_raw, "\\#\\zs.*\\ze\\[")
