@@ -1,29 +1,35 @@
 local M = {}
 
 local regex_pattern = {
+  -- patten match per line
+  -- this var should be list not dict.
 
-  fail_xref1 = "xref:pass:[^ \n]*",
-  fail_xref2 = "xref:++[^ \n]*",
+  {"fail_xref1", "xref:pass:[^ \n\t]*"},
+  -- asciidoctor does not parse xref starts with +, -, !, ※, as link
+  {"fail_xref2", "xref:+[^ \n\t]*"},
 
   -- type = "magic" Regex Pattern
   -- NOTE: Asciidoctor does not consider url starts with _ + * as a link. (2022-06-16)
-  angled_link = "<\\zs[a-z]\\{3,}://[^ \n\\[\\]]\\+\\ze>",
-  autolink_w_text = "\\([_+\\*]\\)\\@<!\\<[a-z]\\{3,}://[^ \n\\[\\]]\\+\\[.\\{-}\\]",
-  autolink =  "\\([_+\\*]\\)\\@<!\\<[a-z]\\{3,}://[^ \n\\[\\]]\\+",
+  {"angled_link", "<\\zs[a-z]\\{3,}://[^ \n\t\\[\\]]\\+\\ze>"},
+  {"autolink_w_text", "\\([\\_+*]\\)\\@<!\\<[a-z]\\{3,}://[^ \n\t\\[\\]]\\+\\[.\\{-}\\]"},
+  {"autolink",  "\\([\\_+*]\\)\\@<!\\<[a-z]\\{3,}://[^ \n\t\\[\\]]\\+"},
 
   -- TODO: Is xref with no *.adoc extension an anchor? <2022-06-16, Hyunjae Kim>
-  xref = "xref:[^ \n]\\+\\[.\\{-}\\]",
+  -- xref = "xref:[^ \n\t]\\+\\[.\\{-}\\]",
+  {"xref", "xref:[^ \n\t]\\+\\[.\\{-}\\]"},
 
   -- NOTE: Even Asciidoctor does handle well when ] or [ is included in the link_pass syntax. (2022-06-16)
-  link_pass = "link:pass:\\[.\\{-}\\]\\[.\\{-}\\]",
-  link_pp = "link:++.\\+++\\[.\\{-}\\]",
+  {"link_pass", "link:pass:\\[.\\{-}\\]\\[.\\{-}\\]"},
+  {"link_pp", "link:++.\\+++\\[.\\{-}\\]"},
   -- link_pp = "link:++",
-  link = "link:[^ \n\\[\\]]\\+\\[.\\{-}\\]",
+  {"link", "link:[^ \n\t\\[\\]]\\+\\[.\\{-}\\]"},
 
-  email = "[^ \n@|/]\\+@[^ \\.\n@|+!~=/]\\+\\.[^ \\.\n@|+!~=/]\\+",
+  {"email", "[^ \n\t@|/]\\+@[^ \\.\n\t@|+!~=/]\\+\\.[^ \\.\n\t@|+!~=/]\\+"},
 
-  fail_link = "link:[^ \n]*",
-  fail_xref = "xref:[^ \n]*",
+  {"fail_link",  "link:[^ \n\t]*"},
+  {"fail_xref",  "xref:[^ \n\t]*"},
+  {"fail_autolink",  "[^ \n\t]*://[^ \n\t]*"},
+  {"fail_email",  "[^ \n\t]\\+@[^ \n\t]\\+"},
 }
 -- local asciidoctor_allowed_autolink_url_schemes = {
 --   -- https://docs.asciidoctor.org/asciidoc/latest/macros/autolinks/
@@ -64,25 +70,46 @@ local parse_link = function(link_type, link_raw)
   -- A: It will treat as filename in asciidoctor. (2022-06-16)
   -- TODO: Handle https://docs.asciidoctor.org/asciidoc/latest/macros/link-macro-attribute-parsing/ <2022-06-15, Hyunjae Kim>
 
+  local pstart, pend = nil, nil
+  local l_ref, anchor, l_string = nil, nil, nil
   if link_type == "xref" then
-    local l_string = vim.fn.matchstr(link_raw, "\\[\\zs.*\\ze\\]$")
-    local l_ref = vim.fn.matchstr(link_raw, link_type .. ":\\zs.\\{-}[\\#\\[]\\@=")
+    -- xref:blabla.adoc#optional[blabla]
+
+    -- local l_string = vim.fn.matchstr(link_raw, "\\[\\zs.*\\ze\\]$")
+    -- local l_ref = vim.fn.matchstr(link_raw, link_type .. ":\\zs.\\{-}[\\#\\[]\\@=")
+    pstart, pend = vim.regex("\\[\\zs.*\\ze\\]$"):match_str(link_raw)
+    l_string = string.sub(link_raw, pstart+1, pend)
+    local l_ref_raw = string.sub(link_raw, 6, pstart-1)
+    anchor = vim.fn.matchstr(l_ref_raw, "\\#\\zs[^#]*\\ze")
+    if string.len(anchor) == 0 then
+      l_ref = l_ref_raw
+    else
+      l_ref = string.sub(l_ref_raw, 1, string.len(l_ref_raw) - string.len("anchor"))
+    -- local l_ref = vim.fn.matchstr(l_ref_raw, "[\\#]\\@=")
+    end
+    -- print(l_ref,string.len(l_ref))
+    -- print(anchor,string.len(anchor))
+    -- print(l_string,string.len(l_string))
+
+
     if string.find(l_ref, ".adoc") then
-      local anchor = vim.fn.matchstr(link_raw, "\\#\\zs.*\\ze\\[")
+      -- local anchor = vim.fn.matchstr(link_raw, "\\#\\zs.*\\ze\\[")
       -- NOTE: `:help non-greedy` \\{-}
       return l_ref, anchor, l_string
     else
-      -- if no extension, l_string will be an anchor
-      local anchor = l_ref
+      -- if no extension, l_ref will be an anchor
+      anchor = l_ref
+      -- TODO: this is an anchor, implement it <2022-06-17, Hyunjae Kim>
+      print("Not implemented yet: Anchor toward " .. anchor)
       return nil, anchor, l_string
     end
   end
 
   if link_type == "link" then
-    local l_string = vim.fn.matchstr(link_raw, "\\[\\zs.*\\ze\\]$")
-    local anchor = vim.fn.matchstr(link_raw, "\\#\\zs.*\\ze\\[")
+    l_string = vim.fn.matchstr(link_raw, "\\[\\zs.*\\ze\\]$")
+    anchor = vim.fn.matchstr(link_raw, "\\#\\zs.*\\ze\\[")
     -- NOTE: `:help non-greedy` \\{-}
-    local l_ref = vim.fn.matchstr(link_raw, link_type .. ":\\zs.\\{-}[\\#\\[]\\@=")
+    l_ref = vim.fn.matchstr(link_raw, link_type .. ":\\zs.\\{-}[\\#\\[]\\@=")
     return l_ref, anchor, l_string
   end
 
@@ -91,8 +118,8 @@ local parse_link = function(link_type, link_raw)
   end
 
   if link_type == "autolink_w_text" then
-    local l_string = vim.fn.matchstr(link_raw, "\\[\\zs.*\\ze\\]$")
-    local l_ref = vim.fn.matchstr(link_raw, ".*\\ze\\[")
+    l_string = vim.fn.matchstr(link_raw, "\\[\\zs.*\\ze\\]$")
+    l_ref = vim.fn.matchstr(link_raw, ".*\\ze\\[")
     return l_ref, nil, l_string
   end
 
@@ -100,7 +127,8 @@ local parse_link = function(link_type, link_raw)
   -- TODO: implement link_pp <2022-06-16, Hyunjae Kim>
   -- TODO: implement email <2022-06-16, Hyunjae Kim>
 
-  print("Syntax error in: " .. link_raw )
+  print("Syntax error: " .. link_raw .. " " .. link_type )
+  -- print("Syntax error: " .. link_raw .. " " .. link_type )
   return nil, nil, nil
 
 end
@@ -112,7 +140,10 @@ local get_link_from_cursor = function()
 
   local link_start, link_end, link_type = nil, nil, nil
 
-  for pattern_type, pattern_reg in pairs(regex_pattern) do
+  for _, val in ipairs(regex_pattern) do
+    local pattern_type = val[1]
+    local pattern_reg = val[2]
+
     -- TODO: this code can not handle multiple link in same line <2022-06-16, Hyunjae Kim>
     link_start, link_end = vim.regex(pattern_reg):match_str(linestr)
     if link_start and cursor_loc <= link_end and cursor_loc > link_start then
@@ -175,6 +206,7 @@ local open_target = function(arg, link_type)
   end
 
   local old_buf = vim.fn.bufnr("%")
+  -- TODO: can not handle character # in new_file <2022-06-17, Hyunjae Kim>
   vim.fn.execute("edit " .. new_file)
 
   -- If no windows contain old_buf than close it.
