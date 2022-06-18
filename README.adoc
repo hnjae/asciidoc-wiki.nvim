@@ -26,7 +26,7 @@ vim.api.nvim_buf_set_keymap( 0, "n", "<Backspace>", "<cmd>lua require('asciidoc-
 * When creating a cross-reference link, it will preserve the `.adoc` extension in the link. This allows the browser to open a cross-reference file.
 * When jumping between cross-reference links in the editor, `asciidoc-wiki` saves and closes its buffer. (It closes buffer only when no other windows are containing it.)
 * When creating a link, `-` will not be replaced with space.
-* Backlink is limited for vim's window. If the window's ID has been changed (by such as C-W S-T) backlink history will be unavailable.
+* BUG: Backlink is limited for vim's window. If the window's ID has been changed (by such as C-W S-T) backlink history will be unavailable.
 * TODO: You can make link from visual mode.
 * TODO: When renaming the file, it will rename the string in the link as well. (If the string and the link filename are the same.)
 * TODO: When renaming the file, it will edit the name from the current filename.

@@ -54,9 +54,14 @@ function M.setup(user_config)
   user_config = vim.tbl_deep_extend('force', {}, default_config, user_config)
   local temp_wikis = {}
   for _, wiki in ipairs(user_config.wiki_list) do
-    table.insert(
-      temp_wikis, vim.tbl_deep_extend('force', {}, default_wiki, wiki)
-    )
+    -- table.insert(
+    --   temp_wikis, vim.tbl_deep_extend('force', {}, default_wiki, wiki)
+    -- )
+    local temp_wiki = vim.tbl_deep_extend('force', {}, default_wiki, wiki)
+    -- use :absolute() to resolve relative path if any.
+    -- local wiki_str = Path:new(Path:new(wiki.path):expand()):absolute()
+    temp_wiki.path = vim.fn.expand(temp_wiki.path)
+    table.insert(temp_wikis, temp_wiki)
   end
   if #temp_wikis == 0 then
     table.insert(user_config.wiki_list, default_wiki)
@@ -73,9 +78,6 @@ function M.setup(user_config)
     }
   )
 
-  A = function()
-    require('asciidoc-wiki.index_file').open()
-  end
 end
 
 return M

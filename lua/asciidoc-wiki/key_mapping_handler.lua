@@ -1,5 +1,6 @@
 local M = {}
 local link = require('asciidoc-wiki.link')
+local func = require('asciidoc-wiki.functions')
 local status_wk, wk = pcall(require, "which-key")
 local var = require('asciidoc-wiki.var')
 
@@ -11,12 +12,14 @@ local buf_prefix_mappings = {
   ["b"] = { link.go_backlink, "go-backlink" },
   -- TODO: Supports [count] feature <2022-06-18, Hyunjae Kim>
   ["i"] = { "<cmd>WikiIndex<CR>", "wiki-index" },
+  ["/"] = { func.wiki_search, "wiki-search" },
 }
 
 
 local function_to_lua_string = {
   [link.follow_link] = "<cmd>lua require('asciidoc-wiki.link').follow_link()<CR>",
   [link.go_backlink] = "<cmd>lua require('asciidoc-wiki.link').go_backlink()<CR>",
+  [func.wiki_search] = "<cmd>lua require('asciidoc-wiki.functions').wiki_search()<CR>",
 }
 
 local buf_set_keymap = function(keymap, map_mode, map_prefix)
