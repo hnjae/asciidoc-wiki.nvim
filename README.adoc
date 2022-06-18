@@ -33,8 +33,10 @@ vim.api.nvim_buf_set_keymap( 0, "n", "<Backspace>", "<cmd>lua require('asciidoc-
     ** e.g.: `Enter new name: blabla.adoc|`
 
 == Changelog
-* 2022-06-18: It now has `WikiIndex` command. Better path handling by link:https://github.com/nvim-lua/plenary.nvim[nvim-lua/plenary.nvim].
-* 2022-06-16: It can now open URLs and the external file (only in Linux).
+* 2022-06-18
+** It has `WikiIndex`, `WikiSearch` command.
+** Better path handling by link:https://github.com/nvim-lua/plenary.nvim[nvim-lua/plenary.nvim].
+* 2022-06-16: It can open URLs and the external file (only in Linux).
 
 == TODO
 * [ ] Handle link.
