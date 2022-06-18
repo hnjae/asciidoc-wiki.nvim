@@ -1,4 +1,5 @@
 local M = {}
+local Path = require('plenary.path')
 
 local regex_pattern = {
   -- patten match per line
@@ -206,12 +207,14 @@ end
 local create_link = function()
   -- TODO: Handle v mode <2022-06-15, Hyunjae Kim>
   -- TODO: Handle non-allowed character <2022-06-15, Hyunjae Kim>
-  -- TODO: if link includes .adoc, skip it <2022-06-16, Hyunjae Kim>
-  -- TODO: if cursor's link start with xref: link: url:// but does not follow asciidoc's syntax, skip creating link. <2022-06-16, Hyunjae Kim>
   local word = vim.fn.expand("<cWORD>")
 
   if word == "" then
     return
+  end
+
+  if word:match("%.adoc$") then
+    word = word:sub(1, -6)
   end
 
   local link_str = "xref:" .. word .. ".adoc[" .. word .. "]"
@@ -229,7 +232,7 @@ local open_target = function(arg, anchor, link_type)
     end
 
     -- print("Opening :" .. target)
-
+    -- TODO: handle relative path <2022-06-18, Hyunjae Kim>
     local output = vim.fn.system("xdg-open -- " .. vim.fn.shellescape(target) .. " &")
   end
 
@@ -238,7 +241,6 @@ local open_target = function(arg, anchor, link_type)
     open_external(arg)
     return
   end
-
 
   -- TODO: Consider using full path <2022-06-15, Hyunjae Kim>
   local history = {
@@ -251,8 +253,14 @@ local open_target = function(arg, anchor, link_type)
   end
   table.insert(history_stack[win_id], history)
 
-  -- TODO: What if arg is absolute? <2022-06-15, Hyunjae Kim>
-  local new_file = vim.fn.expand("%:h") .. "/" .. arg
+  local new_file = nil
+  if Path:new(arg):is_absolute() then
+    new_file = arg
+  else
+    -- TODO: resolve relative path <2022-06-18, Hyunjae Kim>
+    new_file = Path:new(vim.fn.expand("%:h")):joinpath(arg).filename
+    -- new_file = vim.fn.expand("%:h") .. "/" .. arg
+  end
 
   local is_readonly = vim.opt_local.readonly:get()
   if not is_readonly then

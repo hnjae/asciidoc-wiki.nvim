@@ -4,38 +4,23 @@
 
 This project aims to provide a subset of features provided by Vimwiki in AsciiDoc format. Currently, simple follow-link and go-backlink functions are implemented.
 
-== TODO
-* [ ] Handle link.
-** [x] Create a link or follow a link.
-*** [ ] Visual mode support.
-*** [ ] Change the link name if it doesn't follow the filesystem's filename limitation.
-** [x] Go backlink functin.
-** [x] Open external file on link.
-*** [ ] Support anchor.
-** [ ] Allow user to open cross-reference link in vsplit/split.
-** [ ] Handle space in link.
-*** [ ] Handle reserved character such as `%20` or `\&#32;`, `%5F`.
-*** [ ] Handle `pass:` syntax
-** [ ] Handle `include:` syntax.
-** [x] Handle `link:` syntax.
-** [ ] Handle `\<<filename.adoc,link text>>` syntax.
-*** [ ] Read following attribute: `:relfileprefix:`, `:relfilesuffix:`.
-*** [ ] Support anchor: jump to anchor location.
-** [x] Handle link:https://docs.asciidoctor.org/asciidoc/latest/macros/autolinks/[Autolinks]
-** [ ] Handle link:https://docs.asciidoctor.org/asciidoc/latest/macros/link-macro-attribute-parsing/[Link Macro Attribute Parsing]
-** [ ] Handle link:https://docs.asciidoctor.org/asciidoc/latest/macros/complex-urls[Troubleshooting Complex URLs]
-** [ ] Add an option to conceal the link.
-*** [ ] Handle Attribute in link.
-** [ ] Add an option to jump to next/previous link.
-** [ ] Handle `video::`, `audio::`, `image::`
-* [ ] Allow user to config options.
-* [ ] Create a function that opens index file.
-* [ ] Create a function that updates filename in the wiki.
-* [ ] Create a function that writes link of orphan file in index file.
-* [ ] Create a good default mapping.
-* [ ] Implement diary features like Vimwiki.
-* [ ] Write `asciidoc-wiki.txt`
-* [ ] Todo feature.
+== Requirements
+* link:https://github.com/nvim-lua/plenary.nvim[nvim-lua/plenary.nvim]
+
+== Configuration
+For now, it provides two following functions.
+
+    * `+require('asciidoc-wiki.link').follow_link()+`
+    * `+require('asciidoc-wiki.link').go_backlink()+`
+
+If you want to map the above functions to the key sequence, adjust following codes and add it to your config file.
+
+.`+ftplugin/asciidoc.lua+` or .`+/ftplugin/asciidoctor.lua+`
+[source, lua]
+----
+vim.api.nvim_buf_set_keymap( 0, "n", "<CR>", "<cmd>lua require('asciidoc-wiki.link_handler').follow_link()<CR>", {silent = true, noremap = false} )
+vim.api.nvim_buf_set_keymap( 0, "n", "<Backspace>", "<cmd>lua require('asciidoc-wiki.link_handler').go_backlink()<CR>", {silent = true, noremap = false} )
+----
 
 == Different behavior compare to Vimwiki
 * When creating a cross-reference link, it will preserve the `.adoc` extension in the link. This allows the browser to open a cross-reference file.
@@ -47,20 +32,40 @@ This project aims to provide a subset of features provided by Vimwiki in AsciiDo
 * TODO: When renaming the file, it will edit the name from the current filename.
     ** e.g.: `Enter new name: blabla.adoc|`
 
-== Configuration
-For now, it provides two following functions.
-
-    * `+require('asciidoc_wiki.link_handler').follow_link()+`
-    * `+require('asciidoc_wiki.link_handler').go_backlink()+`
-
-If you want to map the above functions to the key sequence, adjust following codes and add it to your config file.
-
-.`+ftplugin/asciidoc.lua+` or .`+/ftplugin/asciidoctor.lua+`
-[source, lua]
-----
-vim.api.nvim_buf_set_keymap( 0, "n", "<CR>", "<cmd>lua require('asciidoc_wiki.link_handler').follow_link()<CR>", {silent = true, noremap = false} )
-vim.api.nvim_buf_set_keymap( 0, "n", "<Backspace>", "<cmd>lua require('asciidoc_wiki.link_handler').go_backlink()<CR>", {silent = true, noremap = false} )
-----
-
 == Changelog
+* 2022-06-18: It now has `WikiIndex` command. Better path handling by link:https://github.com/nvim-lua/plenary.nvim[nvim-lua/plenary.nvim].
 * 2022-06-16: It can now open URLs and the external file (only in Linux).
+
+== TODO
+* [ ] Handle link.
+** [x] Create a link or follow a link.
+*** [ ] Visual mode support.
+*** [ ] Change the link name if it doesn't follow the filesystem's filename limitation.
+** [x] Go backlink functin.
+** [x] Open external file on link.
+*** [ ] Support anchor.
+** [ ] Allow user to open cross-reference link in vsplit/split.
+** [ ] Handle space in link.
+*** [ ] Handle reserved character such as `%20` or `\&#32;`, `%5F`.
+** [ ] Handle `include:` syntax.
+** [x] Handle `link:` syntax.
+*** [ ] Handle `link:pass:` syntax
+*** [ ] Handle `link:++https://aaa.bbb++[ccc]` syntax
+** [ ] Handle `\<<filename.adoc,link text>>` syntax.
+*** [ ] Read following attribute: `:relfileprefix:`, `:relfilesuffix:`.
+*** [ ] Support anchor: jump to anchor location.
+** [x] Handle link:https://docs.asciidoctor.org/asciidoc/latest/macros/autolinks/[Autolinks]
+** [ ] Handle link:https://docs.asciidoctor.org/asciidoc/latest/macros/link-macro-attribute-parsing/[Link Macro Attribute Parsing]
+** [ ] Handle link:https://docs.asciidoctor.org/asciidoc/latest/macros/complex-urls[Troubleshooting Complex URLs]
+** [ ] Add an option to conceal the link.
+*** [ ] Handle Attribute in link.
+** [ ] Add an option to jump to next/previous link.
+** [ ] Handle `video::`, `audio::`, `image::`
+* [x] Allow user to config options.
+* [x] Create a function that opens index file.
+* [ ] Create a function that updates filename in the wiki.
+* [ ] Create a function that writes link of orphan file in index file.
+* [ ] Create a good default mapping.
+* [ ] Implement diary features like Vimwiki.
+* [ ] Write `asciidoc-wiki.txt`
+* [ ] Todo feature.
