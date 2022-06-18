@@ -15,6 +15,12 @@ M.buf_setup = function()
     end,
     { nargs = "?" }
   )
+  api.nvim_buf_create_user_command(
+    0,
+    'WikiSearch',
+    func.wiki_search,
+    { nargs = 0 }
+  )
   -- api.nvim_buf_create_user_command(0, 'WikiIndex', "lua require('asciidoc-wiki.functions').wiki_index", {})
   -- api.nvim_buf_create_user_command(0, 'WikiIndex', "echo 'srtrts'", {})
 end
