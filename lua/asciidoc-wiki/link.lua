@@ -15,7 +15,8 @@ local regex_pattern = {
   {"autolink",  "\\([\\_+*]\\)\\@<!\\<[a-z]\\+://[^ \n\t\\[\\]]\\+"},
 
   -- NOTE: xref with no *.adoc extension converts to an anchor. (2022-06-18)
-  {"xref", "xref:[^`~![\\]@$%^&*()-=+}\\|;',?※][^ \n\t]\\+\\[.\\{-}\\]"},
+  -- {"xref", "xref:[^`~![\\]@$%^&*()-=+}\\|;',?※][^ \n\t]\\+\\[.\\{-}\\]"},
+  {"xref", "xref:[^`~![\\]@$%^&*()+}\\|;',?※][^ \n\t]\\+\\[.\\{-}\\]"},
 
   -- NOTE: Even Asciidoctor does handle well when ] or [ is included in the link_pass syntax. (2022-06-16)
   {"link_pass", "link:pass:\\[.\\{-}\\]\\[.\\{-}\\]"},
@@ -172,7 +173,7 @@ local parse_link = function(link_type, link_raw)
   -- TODO: implement link_pp <2022-06-16, Hyunjae Kim>
   -- TODO: implement email <2022-06-16, Hyunjae Kim>
 
-  print("Syntax error: " .. link_raw .. " " .. link_type )
+  print("Syntax error: " .. link_raw .. " " )
   -- print("Syntax error: " .. link_raw .. " " .. link_type )
   return nil, nil, nil
 end
@@ -201,7 +202,8 @@ local get_link_from_cursor = function()
   end
 
   -- print(string.sub(linestr, link_start+1, link_end))
-  return string.sub(linestr, link_start+1, link_end), link_type
+  -- return string.sub(linestr, link_start+1, link_end), link_type
+  return linestr:sub(link_start+1, link_end), link_type
 end
 
 local create_link = function()
@@ -322,6 +324,32 @@ M.follow_link = function()
   if link_target or anchor then
     open_target(link_target, anchor, link_type)
   end
+end
+
+-- M.conceal_link = function()
+--   -- copied from https://github.com/ratfactor/vviki
+--   -- MIT License; 2022-06-22 checked.
+--   vim.cmd([[
+--     -- syntax region vvikiLink start=/xref:/ end=/\]/ keepend
+--     -- syntax match vvikiLinkGuts /xref:[^[]\+\[/ containedin=vvikiLink contained conceal
+--     -- syntax match vvikiLinkGuts /\]/ containedin=vvikiLink contained conceal
+
+--     highlight link vvikiLink Macro
+--     highlight link vvikiLinkGuts Comment
+--   ]])
+-- end
+
+M.next_xref = function()
+  -- regex copied from https://github.com/ratfactor/vviki
+  -- MIT License; 2022-06-22 checked.
+  -- TODO: Write credit about this. <2022-06-22, Hyunjae Kim>
+  vim.fn.search("xref:.\\{-1,}]")
+end
+
+M.prev_xref = function()
+  -- regex copied from https://github.com/ratfactor/vviki
+  -- MIT License; 2022-06-22 checked.
+  vim.fn.search("xref:.\\{-1,}]", "b")
 end
 
 return M
