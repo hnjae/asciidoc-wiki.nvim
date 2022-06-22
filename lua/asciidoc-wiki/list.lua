@@ -21,7 +21,6 @@ M.toggle_list_item = function()
     else
       new_line = vim.fn.strpart(linestr, 0, u_end+1) .. " " .. vim.fn.strpart(linestr, u_end+2)
     end
-    print(new_line)
     vim.fn.setline(
       '.',
       new_line
