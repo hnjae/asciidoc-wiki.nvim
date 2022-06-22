@@ -1,18 +1,22 @@
 local M = {}
 local link = require('asciidoc-wiki.link')
 local func = require('asciidoc-wiki.functions')
+local list = require('asciidoc-wiki.list')
 local status_wk, wk = pcall(require, "which-key")
 local var = require('asciidoc-wiki.var')
 
 
 local buf_noprefix_mappings = {
   ["<CR>"] = { link.follow_link, "follow-link" },
+  ["<TAB>"] = { link.next_xref, "next-xref" },
+  ["<S-TAB>"] = { link.prev_xref, "prev-xref" },
 }
 local buf_prefix_mappings = {
   ["b"] = { link.go_backlink, "go-backlink" },
   -- TODO: Supports [count] feature <2022-06-18, Hyunjae Kim>
   ["i"] = { "<cmd>WikiIndex<CR>", "wiki-index" },
   ["/"] = { func.wiki_search, "wiki-search" },
+  ["<Space>"] = { list.toggle_list_item, "toggle-list-item" },
 }
 
 

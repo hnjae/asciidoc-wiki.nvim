@@ -1,6 +1,9 @@
 local M = {}
 
 local func = require('asciidoc-wiki.functions')
+local link = require('asciidoc-wiki.link')
+local list = require('asciidoc-wiki.list')
+
 local api = vim.api
 
 M.buf_setup = function()
@@ -19,6 +22,13 @@ M.buf_setup = function()
     0,
     'WikiSearch',
     func.wiki_search,
+    { nargs = 0 }
+  )
+
+  api.nvim_buf_create_user_command(
+    0,
+    'WikiToggleListItem',
+    list.toggle_list_item,
     { nargs = 0 }
   )
   -- api.nvim_buf_create_user_command(0, 'WikiIndex', "lua require('asciidoc-wiki.functions').wiki_index", {})

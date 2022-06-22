@@ -5,6 +5,7 @@
 local key_mapping_handler = require('asciidoc-wiki.key_mapping_handler')
 local user_command_handler = require('asciidoc-wiki.user_command_handler')
 local var = require('asciidoc-wiki.var')
+local link = require('asciidoc-wiki.link')
 
 local M = {}
 -- local ts_utils = require'nvim-treesitter.ts_utils'
@@ -21,13 +22,13 @@ local default_wiki = {
 }
 local default_config = {
   wiki_list = { default_wiki },
-  conceal_links = false,
   key_mappings = {
     prefix = "<Leader>w",
     global = true,
     buffer = true,
     mappings_without_prefix = true,
   },
+  checkbox_mark = "x" -- should be x or *
 }
 
 
