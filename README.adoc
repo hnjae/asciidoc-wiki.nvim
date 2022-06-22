@@ -35,11 +35,12 @@ vim.api.nvim_buf_set_keymap( 0, "n", "<Backspace>", "<cmd>lua require('asciidoc-
 == Changelog
 * 2022-06-22
 ** It can jumps to next `+xref:+` link on the page.
-** Add `+WikiToggleListItem+` command.
+** New `+WikiToggleListItem+` command.
 * 2022-06-18
-** It has `WikiIndex`, `WikiSearch` command.
-** Better path handling by link:https://github.com/nvim-lua/plenary.nvim[nvim-lua/plenary.nvim].
-* 2022-06-16: It can open URLs and the external file (only in Linux).
+** New `WikiIndex`, `WikiSearch` command.
+** Better path handling using link:https://github.com/nvim-lua/plenary.nvim[nvim-lua/plenary.nvim].
+* 2022-06-16
+** It can open URLs and the external file (only in Linux).
 
 == TODO
 * [x] Allow user to config options.
