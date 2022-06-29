@@ -13,7 +13,14 @@ local M = {}
 -- local parsers = require'nvim-treesitter.parsers'
 -- local augroup = api.nvim_create_augroup
 -- local command = api.nvim_create_user_command
-
+--
+local defaut_opener = function()
+  if vim.fn.has('mac') == 1 then
+    return "open"
+  else
+    return "xdg-open"
+  end
+end
 
 local default_wiki = {
   path = "~/wiki",
@@ -29,7 +36,8 @@ local default_config = {
     buffer = true,
     mappings_without_prefix = true,
   },
-  checkbox_mark = "x" -- should be x or *
+  checkbox_mark = "x", -- should be x or *
+  opener = defaut_opener()
 }
 
 

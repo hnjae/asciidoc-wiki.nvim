@@ -1,3 +1,5 @@
+local var = require('asciidoc-wiki.var')
+
 local M = {}
 local Path = require('plenary.path')
 
@@ -273,7 +275,7 @@ local open_target = function(arg, anchor, link_type)
 
     -- print("Opening :" .. target)
     -- TODO: handle relative path <2022-06-18, Hyunjae Kim>
-    local output = vim.fn.system("xdg-open -- " .. vim.fn.shellescape(target) .. " &")
+    local output = vim.fn.system(var.config.opener .. " -- " .. vim.fn.shellescape(target) .. " &")
   end
 
   -- if link_type ~= "xref" then
