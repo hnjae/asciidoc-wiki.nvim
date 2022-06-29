@@ -31,6 +31,13 @@ M.buf_setup = function()
     list.toggle_list_item,
     { nargs = 0 }
   )
+
+  api.nvim_buf_create_user_command(
+    0,
+    'WikiRenameFile',
+    link.wiki_rename_file,
+    { nargs = 0 }
+  )
   -- api.nvim_buf_create_user_command(0, 'WikiIndex', "lua require('asciidoc-wiki.functions').wiki_index", {})
   -- api.nvim_buf_create_user_command(0, 'WikiIndex', "echo 'srtrts'", {})
 end

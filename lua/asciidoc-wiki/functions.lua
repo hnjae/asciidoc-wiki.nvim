@@ -57,5 +57,7 @@ M.wiki_search = function()
   }
 end
 
+M.wiki_diary_index = function()
+end
 
 return M
