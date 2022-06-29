@@ -49,6 +49,7 @@ local buf_set_keymap = function(keymap, map_mode, map_prefix)
       rhs = function_to_lua_string[rhs_capsuled[1]]
     end
 
+    -- TODO: vim.keymap.set() <2022-06-23, Hyunjae Kim>
     vim.api.nvim_buf_set_keymap(
       0,
       map_mode,

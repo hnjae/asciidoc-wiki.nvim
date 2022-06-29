@@ -17,8 +17,9 @@ local M = {}
 
 local default_wiki = {
   path = "~/wiki",
-  diary_rel_path = ".",
   index_filename = "index",
+  diary_rel_path = ".",
+  diary_filename = "diary",
 }
 local default_config = {
   wiki_list = { default_wiki },

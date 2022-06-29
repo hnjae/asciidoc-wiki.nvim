@@ -1,36 +1,38 @@
 local M = {}
 local Path = require('plenary.path')
 
+local xref_regex = vim.regex("xref:[^`~![\\]@$%^&*()+}\\|;',?※][^ \n\t]\\+\\[.\\{-}\\]")
+
 local regex_pattern = {
   -- patten match per line
   -- this var should be list not dict.
 
-  {"fail_xref_pattern", "xref:pattern:[^ \n\t]*"},
+  {"fail_xref_pattern", vim.regex("xref:pattern:[^ \n\t]*")},
   -- asciidoctor does not parse xref starts with +, -, !, ※, as link
 
   -- type = "magic" Regex Pattern
   -- NOTE: Asciidoctor does not consider url starts with _ + * as a link. (2022-06-16)
-  {"angled_link", "\\zs<[a-z]\\+://[^ \n\t\\[\\]]\\+>\\ze"},
-  {"autolink_w_text", "\\([\\_+*]\\)\\@<!\\<[a-z]\\+://[^ \n\t\\[\\]]\\+\\[.\\{-}\\]"},
-  {"autolink",  "\\([\\_+*]\\)\\@<!\\<[a-z]\\+://[^ \n\t\\[\\]]\\+"},
+  {"angled_link", vim.regex("\\zs<[a-z]\\+://[^ \n\t\\[\\]]\\+>\\ze")},
+  {"autolink_w_text", vim.regex("\\([\\_+*]\\)\\@<!\\<[a-z]\\+://[^ \n\t\\[\\]]\\+\\[.\\{-}\\]")},
+  {"autolink",  vim.regex("\\([\\_+*]\\)\\@<!\\<[a-z]\\+://[^ \n\t\\[\\]]\\+")},
 
   -- NOTE: xref with no *.adoc extension converts to an anchor. (2022-06-18)
   -- {"xref", "xref:[^`~![\\]@$%^&*()-=+}\\|;',?※][^ \n\t]\\+\\[.\\{-}\\]"},
-  {"xref", "xref:[^`~![\\]@$%^&*()+}\\|;',?※][^ \n\t]\\+\\[.\\{-}\\]"},
+  {"xref", xref_regex },
 
   -- NOTE: Even Asciidoctor does handle well when ] or [ is included in the link_pass syntax. (2022-06-16)
-  {"link_pass", "link:pass:\\[.\\{-}\\]\\[.\\{-}\\]"},
-  {"link_pp", "link:++.\\+++\\[.\\{-}\\]"},
-  {"link", "link:[^ \n\t\\[\\]]\\+\\[.\\{-}\\]"},
+  {"link_pass", vim.regex("link:pass:\\[.\\{-}\\]\\[.\\{-}\\]")},
+  {"link_pp", vim.regex("link:++.\\+++\\[.\\{-}\\]")},
+  {"link", vim.regex("link:[^ \n\t\\[\\]]\\+\\[.\\{-}\\]")},
 
-  {"mailto", "mailto:[^`~![\\]@$%^&*()-=+}\\|;',?※][^ \n\t]*\\[.*\\]"},
-  {"email", "[^ \n\t@|/]\\+@[^ \\.\n\t@|+!~=/]\\+\\.[^ \\.\n\t@|+!~=/]\\+"},
+  {"mailto", vim.regex("mailto:[^`~![\\]@$%^&*()-=+}\\|;',?※][^ \n\t]*\\[.*\\]")},
+  {"email", vim.regex("[^ \n\t@|/]\\+@[^ \\.\n\t@|+!~=/]\\+\\.[^ \\.\n\t@|+!~=/]\\+")},
 
-  {"fail_link",  "link:[^ \n\t]*"},
-  {"fail_xref",  "xref:[^ \n\t]*"},
-  {"fail_autolink",  "[^ \n\t]*://[^ \n\t]*"},
-  {"fail_mailto",  "mailto:[^ \n\t]*"},
-  {"fail_email",  "[^ \n\t]\\+@[^ \n\t]\\+"},
+  {"fail_link",  vim.regex("link:[^ \n\t]*")},
+  {"fail_xref",  vim.regex("xref:[^ \n\t]*")},
+  {"fail_autolink",  vim.regex("[^ \n\t]*://[^ \n\t]*")},
+  {"fail_mailto",  vim.regex("mailto:[^ \n\t]*")},
+  {"fail_email",  vim.regex("[^ \n\t]\\+@[^ \n\t]\\+")},
 }
 
 
@@ -57,8 +59,11 @@ local history_stack = {}
 -- end
 
 local parse_link = function(link_type, link_raw)
-  -- NOTE: What if two # in link? <2022-06-15, Hyunjae Kim>
+  -- return ref, anchor, string
+
+  -- Q: What if two # in link? <2022-06-15, Hyunjae Kim>
   -- A: It will treat as filename in asciidoctor. (2022-06-16)
+  --
   -- TODO: Handle https://docs.asciidoctor.org/asciidoc/latest/macros/link-macro-attribute-parsing/ <2022-06-15, Hyunjae Kim>
 
   local pstart, pend = nil, nil
@@ -178,6 +183,38 @@ local parse_link = function(link_type, link_raw)
   return nil, nil, nil
 end
 
+
+local get_link_from_line = function(reg_obj, linestr)
+  -- return lists of link(in [link_start, link_end] format) in line
+
+  local ret = {}
+
+  local l_start, l_end = reg_obj:match_str(linestr)
+  if not l_start then
+    return ret
+  end
+
+  table.insert(ret, {l_start, l_end})
+  local line_len = linestr:len()
+  local pre = l_end
+
+  while l_end+1 < line_len do
+    l_start, l_end = reg_obj:match_str(linestr:sub(l_end+1, -1))
+
+    l_start = l_start + pre
+    l_end = l_end + pre
+    pre = l_end
+
+    table.insert(ret, {l_start, l_end})
+
+    if not l_start then
+      break
+    end
+  end
+
+  return ret
+end
+
 local get_link_from_cursor = function()
   -- return raw_link and link_type
   local cursor_loc = vim.fn.col('.')
@@ -186,23 +223,24 @@ local get_link_from_cursor = function()
   local link_start, link_end, link_type = nil, nil, nil
 
   for _, val in ipairs(regex_pattern) do
-    local pattern_type = val[1]
-    local pattern_reg = val[2]
+    local pattern_type, pattern_reg_obj = val[1], val[2]
 
-    -- TODO: this code can not handle multiple link in same line <2022-06-16, Hyunjae Kim>
-    link_start, link_end = vim.regex(pattern_reg):match_str(linestr)
-    if link_start and cursor_loc <= link_end and cursor_loc > link_start then
-      link_type = pattern_type
-      break
+    for _, matched in ipairs(get_link_from_line(pattern_reg_obj, linestr)) do
+      link_start, link_end = matched[1], matched[2]
+
+      if link_start and cursor_loc <= link_end and cursor_loc > link_start then
+        link_type = pattern_type
+        goto break_loop
+        break
+      end
     end
   end
+  ::break_loop::
 
   if link_type == nil then
     return nil
   end
 
-  -- print(string.sub(linestr, link_start+1, link_end))
-  -- return string.sub(linestr, link_start+1, link_end), link_type
   return linestr:sub(link_start+1, link_end), link_type
 end
 
@@ -283,8 +321,6 @@ local open_target = function(arg, anchor, link_type)
   end
 end
 
---------------------------------------------
-
 M.go_backlink = function()
   local msg = "No history in stack."
   local win_id = vim.fn.win_getid()
@@ -311,7 +347,6 @@ M.go_backlink = function()
   if #vim.fn.win_findbuf(old_buf) == 0 then
     vim.fn.execute("bdelete " .. old_buf)
   end
-  -- TODO: hisdel?? <2022-06-15, Hyunjae Kim>
 end
 
 M.follow_link = function()
@@ -351,5 +386,56 @@ M.prev_xref = function()
   -- MIT License; 2022-06-22 checked.
   vim.fn.search("xref:.\\{-1,}]", "b")
 end
+
+local update_xref = function(fname, old, new)
+  -- echo 'Updating links in '.a:fname
+  -- let has_updates = 0
+  -- let dest = []
+  -- for line in readfile(a:fname)
+  --   if !has_updates && match(line, a:old) != -1
+  --     let has_updates = 1
+  --   endif
+  --   " XXX: any other characters to escape!?
+  --   call add(dest, substitute(line, a:old, escape(a:new, '&'), 'g'))
+  -- endfor
+  -- " add exception handling...
+  -- if has_updates
+  --   call rename(a:fname, a:fname.'#vimwiki_upd#')
+  --   call writefile(dest, a:fname)
+  --   call delete(a:fname.'#vimwiki_upd#')
+  -- endif
+
+  -- TODO: use :match_line method of vim.regex <2022-06-23, Hyunjae Kim>
+  for _, linestr in ipairs(vim.fn.readfile(fname)) do
+    for _, matched in ipairs(get_link_from_line(xref_regex, linestr)) do
+      local x_start, x_end = matched[1], matched[2]
+
+      if not x_start then
+        break
+      end
+
+      ref, anchor, string = parse_link("xref", linestr:sub(x_start+1, x_end))
+
+      -- TODO: exception handling <2022-06-23, Hyunjae Kim>
+
+      if ref:sub(1,-6) == old then
+        -- newline
+            -- vim.fn.setline(
+      -- '.',
+      -- vim.fn.strpart(linestr, 0, u_end) .. "[ ] " .. vim.fn.strpart(linestr, u_end)
+        -- )
+
+
+      end
+
+    end
+
+  end
+end
+
+M.wiki_rename_file = function()
+  update_xref("/home/hyunjae/Sync/Library/wiki/blabla/test.adoc", "aaa", "bbb")
+end
+
 
 return M
