@@ -2,18 +2,28 @@
 
 [WIP] This project is in the alpha state. Plugin behavior can be changed at any time.
 
-This project aims to provide a subset of features provided by Vimwiki in AsciiDoc format. Currently, simple follow-link and go-backlink functions are implemented.
+This project aims to provide a subset of features provided by Vimwiki in AsciiDoc format.
+
+// Currently, simple follow-link and go-backlink functions are implemented.
 
 == Requirements
 * link:https://github.com/nvim-lua/plenary.nvim[nvim-lua/plenary.nvim]
+* link:https://github.com/nvim-telescope/telescope.nvim[nvim-telescope/telescope.nvim] (for search feature)
 
 == Configuration
-For now, it provides two following functions.
+For now, it provides following features.
 
+  * Functions
     * `+require('asciidoc-wiki.link').follow_link()+`
     * `+require('asciidoc-wiki.link').go_backlink()+`
+    * `+require('asciidoc-wiki.link').next_xref()+`
+    * `+require('asciidoc-wiki.link').prev_xref()+`
+  * Command
+    * `+:WikiIndex+`
+    * `+:WikiSearch+`
+    * `+:WikiToggleListItem+`
 
-If you want to map the above functions to the key sequence, adjust following codes and add it to your config file.
+If you want to map above functions to the key sequence, adjust following codes and add it to your config file.
 
 .`+ftplugin/asciidoc.lua+` or .`+/ftplugin/asciidoctor.lua+`
 [source, lua]
