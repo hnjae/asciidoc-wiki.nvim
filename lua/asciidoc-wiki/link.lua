@@ -191,8 +191,9 @@ local get_link_from_line = function(reg_obj, linestr)
 
   local ret = {}
 
+  -- Find first match
   local l_start, l_end = reg_obj:match_str(linestr)
-  if not l_start then
+  if l_start == nil then
     return ret
   end
 
@@ -200,8 +201,13 @@ local get_link_from_line = function(reg_obj, linestr)
   local line_len = linestr:len()
   local pre = l_end
 
+  -- Find others
   while l_end+1 < line_len do
     l_start, l_end = reg_obj:match_str(linestr:sub(l_end+1, -1))
+
+    if l_start == nil then
+      break
+    end
 
     l_start = l_start + pre
     l_end = l_end + pre
@@ -209,9 +215,6 @@ local get_link_from_line = function(reg_obj, linestr)
 
     table.insert(ret, {l_start, l_end})
 
-    if not l_start then
-      break
-    end
   end
 
   return ret
@@ -453,11 +456,11 @@ local update_xref = function(fname, old, new)
 
     end
   end
-  print(vim.inspect(dest))
 end
 
 M.wiki_rename_file = function()
-  update_xref("~/Sync/Library/wiki/index.adoc", "aaa", "bbb")
+  -- TODO: complete this <2022-10-03, Hyunjae Kim>
+  -- update_xref("file", "aaa", "bbb")
 end
 
 
