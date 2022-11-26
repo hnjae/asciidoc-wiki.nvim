@@ -1,5 +1,5 @@
 -- Copyright (c) 2022 Hyunjae Kim
--- GPLv2 License
+-- GPLv3 License
 
 -- local link_handler   = require('asciidoc-wiki.link_handler')
 local key_mapping_handler = require('asciidoc-wiki.key_mapping_handler')
