@@ -408,35 +408,56 @@ local update_xref = function(fname, old, new)
   -- endif
 
   -- TODO: use :match_line method of vim.regex <2022-06-23, Hyunjae Kim>
+
+
+  if old == new then
+    return
+  end
+
+  local dest = {}
+
   for _, linestr in ipairs(vim.fn.readfile(fname)) do
     for _, matched in ipairs(get_link_from_line(xref_regex, linestr)) do
       local x_start, x_end = matched[1], matched[2]
 
-      if not x_start then
+      if x_start == nil then
         break
       end
 
-      ref, anchor, string = parse_link("xref", linestr:sub(x_start+1, x_end))
+      local oldlink = linestr:sub(x_start+1, x_end)
+      local ref, anchor, link_string = parse_link("xref", oldlink)
 
-      -- TODO: exception handling <2022-06-23, Hyunjae Kim>
+  --     -- TODO: exception handling <2022-06-23, Hyunjae Kim>
 
-      if ref:sub(1,-6) == old then
-        -- newline
-            -- vim.fn.setline(
-      -- '.',
-      -- vim.fn.strpart(linestr, 0, u_end) .. "[ ] " .. vim.fn.strpart(linestr, u_end)
-        -- )
+      if ref ~= nil and ref:sub(1,-6) == old then
+        local newlink = "xref:" .. new .. ".adoc["
 
+        if link_string == old then
+          newlink  = newlink .. new .. "]"
+        else
+          newlink = newlink .. link_string .. "]"
+        end
 
+        print(newlink)
+        table.insert(dest,
+          vim.fn.substitute(linestr, oldlink, vim.fn.escape(newlink, '&'), 'g')
+        )
       end
+  --           -- vim.fn.setline(
+  --     -- '.',
+  --     -- vim.fn.strpart(linestr, 0, u_end) .. "[ ] " .. vim.fn.strpart(linestr, u_end)
+  --       -- )
+
+
+  --     end
 
     end
-
   end
+  print(vim.inspect(dest))
 end
 
 M.wiki_rename_file = function()
-  update_xref("/home/hyunjae/Sync/Library/wiki/blabla/test.adoc", "aaa", "bbb")
+  update_xref("~/Sync/Library/wiki/index.adoc", "aaa", "bbb")
 end
 
 
