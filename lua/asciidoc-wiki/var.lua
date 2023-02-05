@@ -2,7 +2,6 @@
 
 local M = {}
 
-
 -- TODO: do i need this? <2022-06-18, Hyunjae Kim>
 M.update_config = function(config)
   M.config = config
