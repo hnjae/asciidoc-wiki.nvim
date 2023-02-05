@@ -1,7 +1,8 @@
-local var = require('asciidoc-wiki.var')
+-- TODO:  <2023-02-01, Hyunjae Kim>
+local var = require("asciidoc-wiki.var")
+local Path = require("plenary.path")
 
 local M = {}
-local Path = require('plenary.path')
 
 local xref_regex = vim.regex("xref:[^`~![\\]@$%^&*()+}\\|;',?※][^ \n\t]\\+\\[.\\{-}\\]")
 
@@ -9,34 +10,33 @@ local regex_pattern = {
   -- patten match per line
   -- this var should be list not dict.
 
-  {"fail_xref_pattern", vim.regex("xref:pattern:[^ \n\t]*")},
+  { "fail_xref_pattern", vim.regex("xref:pattern:[^ \n\t]*") },
   -- asciidoctor does not parse xref starts with +, -, !, ※, as link
 
   -- type = "magic" Regex Pattern
   -- NOTE: Asciidoctor does not consider url starts with _ + * as a link. (2022-06-16)
-  {"angled_link", vim.regex("\\zs<[a-z]\\+://[^ \n\t\\[\\]]\\+>\\ze")},
-  {"autolink_w_text", vim.regex("\\([\\_+*]\\)\\@<!\\<[a-z]\\+://[^ \n\t\\[\\]]\\+\\[.\\{-}\\]")},
-  {"autolink",  vim.regex("\\([\\_+*]\\)\\@<!\\<[a-z]\\+://[^ \n\t\\[\\]]\\+")},
+  { "angled_link", vim.regex("\\zs<[a-z]\\+://[^ \n\t\\[\\]]\\+>\\ze") },
+  { "autolink_w_text", vim.regex("\\([\\_+*]\\)\\@<!\\<[a-z]\\+://[^ \n\t\\[\\]]\\+\\[.\\{-}\\]") },
+  { "autolink", vim.regex("\\([\\_+*]\\)\\@<!\\<[a-z]\\+://[^ \n\t\\[\\]]\\+") },
 
   -- NOTE: xref with no *.adoc extension converts to an anchor. (2022-06-18)
   -- {"xref", "xref:[^`~![\\]@$%^&*()-=+}\\|;',?※][^ \n\t]\\+\\[.\\{-}\\]"},
-  {"xref", xref_regex },
+  { "xref", xref_regex },
 
   -- NOTE: Even Asciidoctor does handle well when ] or [ is included in the link_pass syntax. (2022-06-16)
-  {"link_pass", vim.regex("link:pass:\\[.\\{-}\\]\\[.\\{-}\\]")},
-  {"link_pp", vim.regex("link:++.\\+++\\[.\\{-}\\]")},
-  {"link", vim.regex("link:[^ \n\t\\[\\]]\\+\\[.\\{-}\\]")},
+  { "link_pass", vim.regex("link:pass:\\[.\\{-}\\]\\[.\\{-}\\]") },
+  { "link_pp", vim.regex("link:++.\\+++\\[.\\{-}\\]") },
+  { "link", vim.regex("link:[^ \n\t\\[\\]]\\+\\[.\\{-}\\]") },
 
-  {"mailto", vim.regex("mailto:[^`~![\\]@$%^&*()-=+}\\|;',?※][^ \n\t]*\\[.*\\]")},
-  {"email", vim.regex("[^ \n\t@|/]\\+@[^ \\.\n\t@|+!~=/]\\+\\.[^ \\.\n\t@|+!~=/]\\+")},
+  { "mailto", vim.regex("mailto:[^`~![\\]@$%^&*()-=+}\\|;',?※][^ \n\t]*\\[.*\\]") },
+  { "email", vim.regex("[^ \n\t@|/]\\+@[^ \\.\n\t@|+!~=/]\\+\\.[^ \\.\n\t@|+!~=/]\\+") },
 
-  {"fail_link",  vim.regex("link:[^ \n\t]*")},
-  {"fail_xref",  vim.regex("xref:[^ \n\t]*")},
-  {"fail_autolink",  vim.regex("[^ \n\t]*://[^ \n\t]*")},
-  {"fail_mailto",  vim.regex("mailto:[^ \n\t]*")},
-  {"fail_email",  vim.regex("[^ \n\t]\\+@[^ \n\t]\\+")},
+  { "fail_link", vim.regex("link:[^ \n\t]*") },
+  { "fail_xref", vim.regex("xref:[^ \n\t]*") },
+  { "fail_autolink", vim.regex("[^ \n\t]*://[^ \n\t]*") },
+  { "fail_mailto", vim.regex("mailto:[^ \n\t]*") },
+  { "fail_email", vim.regex("[^ \n\t]\\+@[^ \n\t]\\+") },
 }
-
 
 -- TODO: clear history_stack if window closes <2022-06-15, Hyunjae Kim>
 -- key of history_stack: windows' id
@@ -60,31 +60,37 @@ local history_stack = {}
 --   return table.concat(ret)
 -- end
 
+---@return string|nil, string|nil, string|nil # ref, anchor, link_text
 local parse_link = function(link_type, link_raw)
-  -- return ref, anchor, string
-
-  -- Q: What if two # in link? <2022-06-15, Hyunjae Kim>
+  -- NOTE:
+  -- Q: What if two # in link?
   -- A: It will treat as filename in asciidoctor. (2022-06-16)
-  --
+
   -- TODO: Handle https://docs.asciidoctor.org/asciidoc/latest/macros/link-macro-attribute-parsing/ <2022-06-15, Hyunjae Kim>
 
   local pstart, pend = nil, nil
   local l_ref, anchor, l_string = nil, nil, nil
 
   if link_type == "xref" then
-    -- xref:blabla.adoc#optional[blabla]
+    -- e.g: xref:blabla.adoc#optional[blabla]
 
     pstart, pend = vim.regex("\\[\\zs.\\{-}\\ze\\]$"):match_str(link_raw)
-    l_string = link_raw:sub(pstart+1, pend)
 
-    -- l_ref_raw: blabla.adoc#optional
-    local l_ref_raw = link_raw:sub(6, pstart-1)
+    if pstart == nil then
+      vim.notify("ERROR: " .. link_raw)
+      return nil, nil, nil
+    end
+
+    l_string = link_raw:sub(pstart + 1, pend)
+
+    -- e.g.: l_ref_raw: blabla.adoc#optional
+    local l_ref_raw = link_raw:sub(6, pstart - 1)
 
     if l_ref_raw:find("^#") then
       -- xref:#anchor[string] is same as xref:anchor[string]
       anchor = l_ref_raw:sub(2, l_ref_raw:len())
       -- TODO: this is an anchor, implement it <2022-06-17, Hyunjae Kim>
-      print("Not supported yet: Anchor : " .. anchor)
+      vim.notify("Not supported yet: Anchor : " .. anchor)
       return nil, anchor, l_string
     end
 
@@ -95,7 +101,7 @@ local parse_link = function(link_type, link_raw)
       if not l_ref:find("%.adoc$") then
         anchor = l_ref
         -- TODO: this is an anchor, implement it <2022-06-17, Hyunjae Kim>
-        print("Not supported yet: Anchor : " .. anchor)
+        vim.notify("Not supported yet: Anchor : " .. anchor)
         return nil, anchor, l_string
       end
 
@@ -105,7 +111,7 @@ local parse_link = function(link_type, link_raw)
     end
 
     -- xref:babla#blabla then
-    l_ref = l_ref_raw:sub(1, -anchor:len() -2)
+    l_ref = l_ref_raw:sub(1, -anchor:len() - 2)
     if not l_ref:find("%.adoc$") then
       -- NOTE: xref:aaa#bbb[ccc] is translated as <a href="aaa.html#bbb">ccc</a> (2022-06-18 confirmed)
       return l_ref .. ".html", anchor, l_string
@@ -115,10 +121,9 @@ local parse_link = function(link_type, link_raw)
   end
 
   if link_type == "link" then
-
     pstart, pend = vim.regex("\\[\\zs.\\{-}\\ze\\]$"):match_str(link_raw)
-    l_string = link_raw:sub(pstart+1, pend)
-    local l_ref_raw = string.sub(link_raw, 6, pstart-1)
+    l_string = link_raw:sub(pstart + 1, pend)
+    local l_ref_raw = string.sub(link_raw, 6, pstart - 1)
 
     anchor = vim.fn.matchstr(l_ref_raw, "\\#\\zs[^#]*\\ze$")
     if anchor:len() == 0 then
@@ -140,21 +145,23 @@ local parse_link = function(link_type, link_raw)
     if link_type == "autolink_w_text" then
       l_string = vim.fn.matchstr(link_raw, "\\[\\zs.\\{-}\\ze\\]$")
       -- l_ref = vim.fn.matchstr(link_raw, ".*\\ze\\[")
-      l_ref = link_raw:sub(1, - l_string:len() - 3)
+      l_ref = link_raw:sub(1, -l_string:len() - 3)
     elseif link_type == "angled_link" then
-        -- remove angle brackets
-        l_ref = link_raw:sub(2, -2)
-        l_string = l_ref
+      -- remove angle brackets
+      l_ref = link_raw:sub(2, -2)
+      l_string = l_ref
     else
       -- link_type == autolink
       l_ref = link_raw
       l_string = l_ref
     end
 
-
     local asciidoctor_allowed_autolink_url_schemes = {
       -- https://docs.asciidoctor.org/asciidoc/latest/macros/autolinks/
-      "https", "http", "ftp", "irc",
+      "https",
+      "http",
+      "ftp",
+      "irc",
       -- Although "file" is not listed in documents. it is interpreted as well. (2022-06-17)
       "file",
     }
@@ -168,85 +175,80 @@ local parse_link = function(link_type, link_raw)
     end
 
     if not is_matched then
-      print("Following URL scheme is not supported: " .. l_ref)
+      vim.notify("Following URL scheme is not supported: " .. l_ref)
       return
     end
 
     return l_ref, nil, l_string
   end
 
-
   -- TODO: implement link_pass <2022-06-16, Hyunjae Kim>
   -- TODO: implement link_pp <2022-06-16, Hyunjae Kim>
   -- TODO: implement email <2022-06-16, Hyunjae Kim>
 
-  print("Syntax error: " .. link_raw .. " " )
+  vim.notify("Syntax error: " .. link_raw .. " ")
   -- print("Syntax error: " .. link_raw .. " " .. link_type )
   return nil, nil, nil
 end
 
-
-local get_link_from_line = function(reg_obj, linestr)
-  -- return lists of link(in [link_start, link_end] format) in line
+---@param linestr string
+---@return table # lists of link(in [link_start, link_end] format) in line
+local get_link_from_line = function(re_obj, linestr)
+  if linestr == nil then
+    return {}
+  end
 
   local ret = {}
 
-  -- Find first match
-  local l_start, l_end = reg_obj:match_str(linestr)
-  if l_start == nil then
-    return ret
-  end
-
-  table.insert(ret, {l_start, l_end})
   local line_len = linestr:len()
-  local pre = l_end
+  local checked_idx = 0
 
-  -- Find others
-  while l_end+1 < line_len do
-    l_start, l_end = reg_obj:match_str(linestr:sub(l_end+1, -1))
+  -- Find match
+  while checked_idx + 1 < line_len do
+    local l_start, l_end = re_obj:match_str(linestr:sub(checked_idx + 1, -1))
 
     if l_start == nil then
       break
     end
 
-    l_start = l_start + pre
-    l_end = l_end + pre
-    pre = l_end
-
-    table.insert(ret, {l_start, l_end})
-
+    -- NOTE: vim.regex() uses 0-based index
+    table.insert(ret, { checked_idx + l_start + 1, checked_idx + l_end })
+    checked_idx = checked_idx + l_end
   end
 
   return ret
 end
 
+-- return raw_link and link_type
 local get_link_from_cursor = function()
-  -- return raw_link and link_type
-  local cursor_loc = vim.fn.col('.')
-  local linestr = vim.fn.getline('.')
+  -- NOTE: vim.fn.col uses 1-based index
+  local cursor_loc = vim.fn.col(".")
+
+  -- local linestr = vim.fn.getline('.')
+  local linestr = vim.api.nvim_get_current_line()
 
   local link_start, link_end, link_type = nil, nil, nil
 
   for _, val in ipairs(regex_pattern) do
-    local pattern_type, pattern_reg_obj = val[1], val[2]
+    local pattern_type, pattern_re_obj = val[1], val[2]
 
-    for _, matched in ipairs(get_link_from_line(pattern_reg_obj, linestr)) do
+    for _, matched in ipairs(get_link_from_line(pattern_re_obj, linestr)) do
       link_start, link_end = matched[1], matched[2]
 
-      if link_start and cursor_loc <= link_end and cursor_loc > link_start then
+      if cursor_loc <= link_end and cursor_loc >= link_start then
         link_type = pattern_type
         goto break_loop
         break
       end
     end
   end
-  ::break_loop::
 
-  if link_type == nil then
-    return nil
+  ::break_loop::
+  if link_type ~= nil then
+    return linestr:sub(link_start, link_end), link_type
   end
 
-  return linestr:sub(link_start+1, link_end), link_type
+  return nil
 end
 
 local create_link = function()
@@ -254,7 +256,7 @@ local create_link = function()
   -- TODO: Handle non-allowed character <2022-06-15, Hyunjae Kim>
   local word = vim.fn.expand("<cWORD>")
 
-  if word == "" then
+  if word == "" or word == nil then
     return
   end
 
@@ -290,7 +292,7 @@ local open_target = function(arg, anchor, link_type)
   -- TODO: Consider using full path <2022-06-15, Hyunjae Kim>
   local history = {
     (vim.fn.expand("%:h") .. "/" .. vim.fn.expand("%:t")),
-    vim.fn.getpos('.'),
+    vim.fn.getpos("."),
   }
   local win_id = vim.fn.win_getid()
   if not history_stack[win_id] then
@@ -312,7 +314,10 @@ local open_target = function(arg, anchor, link_type)
     vim.fn.execute("w")
   end
 
-  local old_buf = vim.fn.bufnr("%")
+  ---@type number
+  -- local old_buf = vim.fn.bufnr("%")
+  local old_buf = vim.fn.bufnr()
+
   -- TODO: can not handle character # in new_file <2022-06-17, Hyunjae Kim>
   -- TODO: escape string for use as a vim command arguments <2022-06-18, Hyunjae Kim>
   -- if new_file:find("#") then
@@ -328,8 +333,9 @@ end
 
 M.go_backlink = function()
   local msg = "No history in stack."
+
   local win_id = vim.fn.win_getid()
-  if not history_stack[win_id]then
+  if not history_stack[win_id] then
     print(msg)
     return
   end
@@ -344,7 +350,8 @@ M.go_backlink = function()
     vim.fn.execute("w")
   end
 
-  local old_buf = vim.fn.bufnr("%")
+  -- local old_buf = vim.fn.bufnr("%")
+  local old_buf = vim.fn.bufnr()
   vim.fn.execute("edit " .. latest_his[1])
   vim.fn.setpos(".", latest_his[2])
 
@@ -392,34 +399,25 @@ M.prev_xref = function()
   vim.fn.search("xref:.\\{-1,}]", "b")
 end
 
-local update_xref = function(fname, old, new)
-  -- echo 'Updating links in '.a:fname
-  -- let has_updates = 0
-  -- let dest = []
-  -- for line in readfile(a:fname)
-  --   if !has_updates && match(line, a:old) != -1
-  --     let has_updates = 1
-  --   endif
-  --   " XXX: any other characters to escape!?
-  --   call add(dest, substitute(line, a:old, escape(a:new, '&'), 'g'))
-  -- endfor
-  -- " add exception handling...
-  -- if has_updates
-  --   call rename(a:fname, a:fname.'#vimwiki_upd#')
-  --   call writefile(dest, a:fname)
-  --   call delete(a:fname.'#vimwiki_upd#')
-  -- endif
-
+---@param filepath string # filepath to update link
+---@param oldname string
+---@param newname string
+local update_xref = function(filepath, oldname, newname)
   -- TODO: use :match_line method of vim.regex <2022-06-23, Hyunjae Kim>
 
-
-  if old == new then
+  if oldname == newname then
     return
   end
 
-  local dest = {}
+  vim.notify("Updating links in " .. filepath)
+  local updated_contents = {}
+  --@type bool
+  local is_any_update = false
 
-  for _, linestr in ipairs(vim.fn.readfile(fname)) do
+  for line_idx, linestr in ipairs(vim.fn.readfile(filepath)) do
+    -- linestr 에 oldname 링크가 있으면 갱신하기
+    local newline_str = ""
+    local num_col_added = 0
     for _, matched in ipairs(get_link_from_line(xref_regex, linestr)) do
       local x_start, x_end = matched[1], matched[2]
 
@@ -427,41 +425,65 @@ local update_xref = function(fname, old, new)
         break
       end
 
-      local oldlink = linestr:sub(x_start+1, x_end)
-      local ref, anchor, link_string = parse_link("xref", oldlink)
+      ---@type string
+      local oldlink_str = linestr:sub(x_start, x_end)
+      local ref, anchor, link_text = parse_link("xref", oldlink_str)
 
-  --     -- TODO: exception handling <2022-06-23, Hyunjae Kim>
+      if ref == nil or ref:sub(1, -6) ~= oldname then
+        -- do nothing if link is not oldname's link
+        newline_str = newline_str .. linestr:sub(num_col_added + 1, x_end)
+        num_col_added = x_end
+      else
+        -- TODO: keep anchor in link <2022-12-28, Hyunjae Kim>
+        -- TODO: link-macro-attribute-parsing <2022-12-29, Hyunjae Kim>
 
-      if ref ~= nil and ref:sub(1,-6) == old then
-        local newlink = "xref:" .. new .. ".adoc["
-
-        if link_string == old then
-          newlink  = newlink .. new .. "]"
+        local newlink_str = ""
+        if link_text == oldname then
+          newlink_str = "xref:" .. newname .. ".adoc[" .. newname .. "]"
         else
-          newlink = newlink .. link_string .. "]"
+          newlink_str = "xref:" .. newname .. ".adoc[" .. link_text .. "]"
         end
+        newline_str = newline_str .. linestr:sub(num_col_added + 1, x_start - 1) .. newlink_str
+        is_any_update = true
 
-        print(newlink)
-        table.insert(dest,
-          vim.fn.substitute(linestr, oldlink, vim.fn.escape(newlink, '&'), 'g')
-        )
+        num_col_added = x_end
       end
-  --           -- vim.fn.setline(
-  --     -- '.',
-  --     -- vim.fn.strpart(linestr, 0, u_end) .. "[ ] " .. vim.fn.strpart(linestr, u_end)
-  --       -- )
-
-
-  --     end
-
     end
+
+    if num_col_added ~= 0 then
+      -- if there were link in line
+      if num_col_added < #linestr then
+        newline_str = newline_str .. linestr:sub(num_col_added + 1, #linestr)
+      end
+      table.insert(updated_contents, newline_str)
+    else
+      table.insert(updated_contents, linestr)
+    end
+  end
+
+  if is_any_update then
+    os.rename(filepath, filepath .. ".temp")
+    vim.fn.writefile(updated_contents, filepath)
+    os.remove(filepath .. ".temp")
   end
 end
 
 M.wiki_rename_file = function()
+  -- rename current buffer's file
   -- TODO: complete this <2022-10-03, Hyunjae Kim>
-  -- update_xref("file", "aaa", "bbb")
-end
+  -- TODO: ask user to ensure the renaming <2022-12-28, Hyunjae Kim>
+  -- TODO: ask user for new name <2022-12-28, Hyunjae Kim>
+  -- TODO: find which wiki's file <2022-12-28, Hyunjae Kim>
+  -- TODO: check if new name is in wiki_dir <2022-12-29, Hyunjae Kim>
+  -- TODO: rename wiki link <2022-12-29, Hyunjae Kim>
+  -- TODO: Iterate all file in wiki and rename in file <2022-12-28, Hyunjae Kim>
 
+  --@type string
+  local new_name = vim.fn.input({ prompt = "New name: " })
+  --@type string
+  -- local new_name = vim.fn.input({prompt='Rename ' .. })
+  -- vim.notify("!" .. new_name .. "!", 0, {})
+  vim.api.nvim_exec("edit", false)
+end
 
 return M
