@@ -1,10 +1,9 @@
 local M = {}
-local link = require('asciidoc-wiki.link')
-local func = require('asciidoc-wiki.functions')
-local list = require('asciidoc-wiki.list')
+local link = require("asciidoc-wiki.link")
+local func = require("asciidoc-wiki.functions")
+local list = require("asciidoc-wiki.list")
 local status_wk, wk = pcall(require, "which-key")
-local var = require('asciidoc-wiki.var')
-
+local var = require("asciidoc-wiki.var")
 
 local buf_noprefix_mappings = {
   ["<CR>"] = { link.follow_link, "follow-link" },
@@ -19,7 +18,6 @@ local buf_prefix_mappings = {
   ["<Space>"] = { list.toggle_list_item, "toggle-list-item" },
 }
 
-
 local function_to_lua_string = {
   [link.follow_link] = "<cmd>lua require('asciidoc-wiki.link').follow_link()<CR>",
   [link.go_backlink] = "<cmd>lua require('asciidoc-wiki.link').go_backlink()<CR>",
@@ -28,16 +26,13 @@ local function_to_lua_string = {
 
 local buf_set_keymap = function(keymap, map_mode, map_prefix)
   if status_wk then
-    wk.register(
-      keymap,
-      {
-        buffer = 0,
-        mode = map_mode,
-        prefix = map_prefix,
-        silent = true,
-        noremap = false,
-      }
-    )
+    wk.register(keymap, {
+      buffer = 0,
+      mode = map_mode,
+      prefix = map_prefix,
+      silent = true,
+      noremap = false,
+    })
     return
   end
 
@@ -50,16 +45,9 @@ local buf_set_keymap = function(keymap, map_mode, map_prefix)
     end
 
     -- TODO: vim.keymap.set() <2022-06-23, Hyunjae Kim>
-    vim.api.nvim_buf_set_keymap(
-      0,
-      map_mode,
-      map_prefix .. lhs,
-      rhs,
-      {silent = true, noremap = false}
-    )
+    vim.api.nvim_buf_set_keymap(0, map_mode, map_prefix .. lhs, rhs, { silent = true, noremap = false })
   end
 end
-
 
 M.buf_setup = function()
   local keymap_config = var.config.key_mappings

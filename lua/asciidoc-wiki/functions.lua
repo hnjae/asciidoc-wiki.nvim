@@ -1,8 +1,8 @@
--- The module that provides various useful functions.
+-- The module that provides various functions.
 
 local M = {}
-local var = require('asciidoc-wiki.var')
-local Path = require('plenary.path')
+local var = require("asciidoc-wiki.var")
+local Path = require("plenary.path")
 
 local get_cur_wiki = function()
   local cur_file = vim.fn.expand("%:p")
@@ -10,7 +10,7 @@ local get_cur_wiki = function()
     -- NOTE: vim.fn.expand() does not resolve relative path or symbolic link.
 
     -- NOTE: wiki.path here should be absolute path. (init.lua resolve it.)
-    if cur_file:match("^" .. wiki.path) then
+    if cur_file ~= nil and cur_file:match("^" .. wiki.path) then
       return wiki
     end
   end
@@ -33,9 +33,7 @@ M.wiki_index = function(wiki_num)
     wiki = var.config.wiki_list[wiki_num]
   end
 
-  local index_path = (Path:new(wiki.path)):joinpath(
-    wiki.index_filename .. ".adoc"
-  )
+  local index_path = (Path:new(wiki.path)):joinpath(wiki.index_filename .. ".adoc")
 
   vim.fn.execute("edit " .. index_path.filename)
 end
@@ -51,13 +49,12 @@ M.wiki_search = function()
     return
   end
 
-  t_builtin.live_grep{
+  t_builtin.live_grep({
     cwd = wiki.path,
-    type_filter = "asciidoc"
-  }
+    type_filter = "asciidoc",
+  })
 end
 
-M.wiki_diary_index = function()
-end
+M.wiki_diary_index = function() end
 
 return M
