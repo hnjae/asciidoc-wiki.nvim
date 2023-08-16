@@ -81,11 +81,17 @@ function M.setup(user_config)
   end
 
   var.update_config(user_config)
-  M.glob_setup()
-  vim.api.nvim_create_autocmd("FileType", {
-    pattern = { "asciidoc", "asciidoctor" },
-    callback = M.buf_setup,
-  })
+
+  if user_config.global then
+    M.glob_setup()
+  end
+
+  if user_config.buffer then
+    vim.api.nvim_create_autocmd("FileType", {
+      pattern = { "asciidoc", "asciidoctor" },
+      callback = M.buf_setup,
+    })
+  end
 end
 
 return M
